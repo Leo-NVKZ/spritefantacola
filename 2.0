@@ -1,0 +1,160 @@
+#include <Servo.h> // Подключаем библиотеку для сервопривода
+
+int n = 0; // Переменная для массива
+int intersect[] = {1, 2, 4, 3, 3, 4, 2, 1, 4}; // массив со значениями для реакции на касание черной линии:
+                                                // 1 - поворот направо,
+                                                // 2 - поворот налево,
+                                                // 3 - проезд прямо
+                                                // 4 - бросить баночку и развернуться.
+
+Servo manipulator; // Сервопривод манипулятора
+int ang = 50; // Угол установки сервопривода
+
+const int sens_left = 0; // Пин левого сенсора
+const int sens_right = 1; // Пин правого сенсора
+const int sens_manipulator = 2; // Пин сенсора манипулятора
+
+const int motorspeed_left = 5; // Пин управления скоростью левого мотора
+const int motorspeed_right = 6; // Пин управления скоростью правого мотора
+const int motordir_left = 10; // Пин управления направлением вращения левого мотора
+const int motordir_right = 11; // Пин управления направлением вращения правого мотора 
+
+int motorspeed = 200; // Переменная скорости вращения моторов
+int jar_caught = 0; // Переменная-флажок, захвачена ли баночка
+int jar_count = 0; // Переменная для подсчета доставленных баночек
+
+int duration = 10; // Переменная длительности движения
+
+
+// Функции управления передвижением с изменяемой длительностью
+
+int turn_right(int duration) 
+{
+    digitalWrite (motordir_left, LOW); // задаем направление
+    digitalWrite (motordir_right, HIGH);
+    analogWrite (motorspeed_left, motorspeed); // задаем скорость
+    analogWrite (motorspeed_right, motorspeed);
+    delay (duration); 
+    analogWrite (motorspeed_left,0);
+    analogWrite (motorspeed_right,0);
+}
+
+int turn_left(int duration)
+{
+    digitalWrite (motordir_left, HIGH);
+    digitalWrite (motordir_right, LOW);
+    analogWrite (motorspeed_left, motorspeed);
+    analogWrite (motorspeed_right, motorspeed);
+    delay (duration);
+    analogWrite (motorspeed_left,0);
+    analogWrite (motorspeed_right,0);
+}
+
+int forward(int duration)
+{
+    digitalWrite (motordir_left, LOW);
+    digitalWrite (motordir_right, LOW);
+    analogWrite (motorspeed_left, motorspeed);
+    analogWrite (motorspeed_right, motorspeed);
+    delay (duration);
+    analogWrite (motorspeed_left,0);
+    analogWrite (motorspeed_right,0);
+}
+
+int go_back(int duration)
+{
+    digitalWrite (motordir_left, HIGH);
+    digitalWrite (motordir_right, HIGH);
+    analogWrite (motorspeed_left, motorspeed);
+    analogWrite (motorspeed_right, motorspeed);
+    delay (duration);
+    analogWrite (motorspeed_left,0);
+    analogWrite (motorspeed_right,0);
+}
+      
+void setup()
+{
+    pinMode (motorspeed_left, OUTPUT); // Задаем пин как выход
+    pinMode (motorspeed_right, OUTPUT); // Задаем пин как выход
+    pinMode (motordir_left, OUTPUT); // Задаем пин как выход
+    pinMode (motordir_right, OUTPUT); // Задаем пин как выход
+    manipulator.attach(4); // Назначаем подключение сервомотора на пин 4
+}
+
+void loop() 
+{
+    delay(4000);
+    manipulator.write(ang); // установка манипулятора в открытое положение
+    delay(2000);
+
+    // Выполняем, пока не унесем все баночки
+    while (jar_count < 3)
+    {
+ 
+        // Если правый датчик на черной линии, а левый нет, то  
+        if (analogRead(sens_right) > 600 && analogRead(sens_left) < 600)
+        {
+            turn_right(10);
+        }
+      
+        // Если левый датчик на черной линии, а правый нет, то  
+        if (analogRead(sens_right) < 600 && analogRead(sens_left) > 600)
+        {
+            turn_left(10);
+        }
+
+        // Если левый и правый датчик не на черной линии, то  
+        if (analogRead(sens_right) < 600 && analogRead(sens_left) < 600)
+        { 
+            forward(10);
+        } 
+
+        // Если луч сенсора манипулятора перекрыт баночкой и стоит флажок "баночка не захвачена", то  
+        if (analogRead(sens_manipulator) > 700 && jar_caught == 0)
+        {
+            // Медленно закрываем манипулятор, берем баночку
+            do
+            {
+                manipulator.write(++ang);  
+                delay(15);
+            }
+            while (ang<135);
+            ang = 50; // сразу устанавливаем значение переменной угла сервопривода, соответсвующее открытому манипулятору
+            jar_caught = 1; // Выставляем флажок "Баночка захвачена"
+            turn_left(1450); // Разворачиваемся
+        } 
+
+        // Если левый и правый датчик на черной линии или над пропастью, то  
+        if (analogRead(sens_right) > 600 && analogRead(sens_left) > 600)
+        {  
+            if (intersect[n] == 1)
+            {
+                forward(700);
+                turn_right(700);
+            }
+            if (intersect[n] == 2)
+            {
+                forward(700);
+                turn_left(700);
+            }
+            if (intersect[n] == 3)
+            {
+                forward(700);
+            }
+            if (intersect[n] == 4)
+            {
+                manipulator.write(ang); // Бросаем баночку
+                jar_caught = 0; // Выставляем флажок "Баночка не захвачена"
+                go_back(500); //немного отъезжаем назад
+                turn_left(1400); //и разворачиваемся
+                ++jar_count; // Инкрементируем количество доставленных баночек
+            }
+             ++n; 
+        }
+    }
+
+    // Отключаем моторы
+    analogWrite (motorspeed_left,0);
+    analogWrite (motorspeed_right,0); 
+    manipulator.detach(); // Отключаем сервомотор от пина 4, это пока что-то не работает, не плолучается сбросить напругу с сервы
+}
