@@ -175,20 +175,24 @@ void loop()
                     go_forward(VALUE_MOVETICK);
                 }
             }
+            break;
         }
         case CROSSROAD_TURN_LEFT:
         {
             go_forward(700);
             turn_left(700);
+            break;
         }
         case CROSSROAD_MOVE_FORWARD:
         {
             go_forward(700);
+            break;
         }
         case CROSSROAD_TURN_RIGHT:
         {
             go_forward(700);
             turn_right(700);
+            break;
         }
         case GRAB_JAR_AND_TURN_AROUND:
         {
@@ -201,12 +205,14 @@ void loop()
             }
             while (value != VALUE_MANIPULATOR_CLOSED);
             turn_left(1400); // Разворачиваемся
+            break;
         }
         case DROP_JAR_AND_TURN_AROUND:
         {
             manipulator.write(VALUE_MANIPULATOR_OPENED); // Бросаем баночку
             go_back(500); // Немного отъезжаем назад
             turn_left(1400); // Разворачиваемся
+            break;
         }
         case TURN_OFF:
         {
